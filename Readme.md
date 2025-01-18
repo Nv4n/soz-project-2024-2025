@@ -24,11 +24,11 @@
 
 [Evolution of Recommendation Algorithms, Part I: Fundamentals , History Overview, Core and Classical Algorithms](https://medium.com/@anicomanesh/evolution-of-recommendation-algorithms-part-i-fundamentals-and-classical-recommendation-bb1c0bce78a9)
 
-### Препоръки на базата на повече от 2 параметъра чрез регресия, грешна класификация и грануларни изчисления:
+### Препоръки на базата на повече от 2 параметъра чрез регресия, грешна класификация и гранулирани изчисления:
 > например: **рейтинг** - базов компонент на препоръката, **възрастово групиране на читателите** и **жанрово разпределение на книгите**;
 - **Регресия**: https://www.sciencedirect.com/science/article/abs/pii/S0020025516301669
 - **Грешна класификация**: https://www.sciencedirect.com/topics/engineering/misclassification
-- **Грануларни изчисления**: https://www.sciencedirect.com/topics/computer-science/granular-computing
+- **Гранулирани изчисления**: https://www.sciencedirect.com/topics/computer-science/granular-computing
 
 > Очертават се основно 3 подхода:
 > - **линейна регресия с параметри рейтинг, възрасти, жанрове** (като ги свеждаме до категорийни или числови променливи) или **друг вид регресия при по-сложни модели**;

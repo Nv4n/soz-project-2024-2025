@@ -19,3 +19,6 @@
 ### My Recommendation Article Series in Medium:
 
 [Evolution of Recommendation Algorithms, Part I: Fundamentals , History Overview, Core and Classical Algorithms](https://medium.com/@anicomanesh/evolution-of-recommendation-algorithms-part-i-fundamentals-and-classical-recommendation-bb1c0bce78a9)
+
+## Кратко описание на задачата:
+Система за препоръки на книги, като препоръките се базират на рейтинг от читателите/потребителите чрез корелация по рейтинг и прилагането на k-NN алгоритъма. На данните би могло да се приложи ре-филтрация по жанрове и по възраст на читателите (евентуално). Основен проблем, който би следвало да се реши преди ре-филтрацията е, че 40% от читателите не са посочили възрастта си, което води до нужда от поправки/зачистване в данните преди ре-филтрацията.

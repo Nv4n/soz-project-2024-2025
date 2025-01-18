@@ -14,7 +14,7 @@
 
 [Recom I: Data Understanding and Simple Recommendation](https://www.kaggle.com/arashnic/recom-i-data-understanding-and-simple-recomm)
 
-## More Readings
+## Повече информация
 
 ### My Recommendation Article Series in Medium:
 

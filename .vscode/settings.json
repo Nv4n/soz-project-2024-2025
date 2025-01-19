@@ -7,5 +7,6 @@
         "markdown",
         "latex",
         "plaintext"
-    ]
+    ],
+    "docwriter.style": "NumPy"
 }

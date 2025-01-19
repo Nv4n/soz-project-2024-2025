@@ -47,7 +47,7 @@ book_rating_with_total_count = combine_book_ratings.merge(
 # pp(book_rating_with_total_count["Book-Rating"].describe())
 # pp(book_rating_with_total_count["RatingCount"].quantile(np.arange(0.9, 1, 0.01)))
 
-popularity_threshold = 236
+popularity_threshold = 100
 
 rating_popular_books = book_rating_with_total_count.query(
     "RatingCount >= @popularity_threshold"
@@ -62,7 +62,7 @@ pivot = (
 )
 matrix_popular_books = csr_matrix(pivot.values)
 
-pp(pivot)
+# pp(pivot)
 
 
 model_knn = NearestNeighbors(metric="cosine", algorithm="brute")
@@ -70,15 +70,18 @@ model_knn.fit(matrix_popular_books)
 
 
 def get_recommends(book=""):
-    x = pivot.loc[book].array.reshape(1, -1)
-    distances, indices = model_knn.kneighbors(x, n_neighbors=6)
-    R_books = []
-    for distance, indice in zip(distances[0], indices[0]):
-        if distance != 0:
-            R_book = pivot.index[indice]
-            R_books.append([R_book, distance])
-    recommended_books = [book, R_books[::-1]]
-    return recommended_books
+    try:
+        x = pivot.loc[book].array.reshape(1, -1)
+        distances, indices = model_knn.kneighbors(x, n_neighbors=20)
+        R_books = []
+        for distance, indice in zip(distances[0], indices[0]):
+            if distance != 0:
+                R_book = pivot.index[indice]
+                R_books.append([R_book, distance])
+        recommended_books = [book, R_books[::-1]]
+        return recommended_books
+    except:
+        return f"{book} is not in the top books"
 
 
-pp(get_recommends("A Bend in the Road"))
+pp(get_recommends("Tess of the D'Urbervilles (Wordsworth Classics)"))

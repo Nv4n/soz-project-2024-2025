@@ -3,34 +3,46 @@ import pandas as pd
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from sklearn.model_selection import train_test_split
-import warnings
 
-# Suppress warnings
-warnings.filterwarnings('ignore')
 
 # Load the data
-all_ratings = pd.read_csv('src\\data\\Ratings.csv')
-all_books = pd.read_csv('src\\data\\Books.csv')
-all_users = pd.read_csv('src\\data\\Users.csv')
+all_ratings = pd.read_csv("src/data/Ratings.csv", na_values=["null", "nan", ""])
+all_books = pd.read_csv(
+    "src/data/Books.csv",
+    na_values=["null", "nan", ""],
+    usecols=["ISBN", "Book-Title", "Book-Author"],
+)
+all_users = pd.read_csv("src/data/Users.csv", na_values=["null", "nan", ""])
+
+all_books = all_books.fillna("NaN")
+all_ratings = all_ratings.dropna()
+all_users = all_users.fillna(-1)
 
 # Merge the ratings data with users on 'User-ID' to get ages alongside ratings
-merged_data = pd.merge(all_ratings, all_users[['User-ID', 'Age']], on='User-ID', how='inner')
+merged_data = pd.merge(
+    all_ratings, all_users, on="User-ID", how="inner"
+)
 
 # Drop NaN values from merged data (both Book-Rating and Age)
-merged_data = merged_data.dropna(subset=['Book-Rating', 'Age'])
+merged_data = merged_data.dropna(subset=["Book-Rating", "Age"])
 
 # Prepare features and target
-X = np.column_stack((merged_data["Book-Rating"].values, merged_data["Age"].values))  # Features: Book Rating and Age
+X = np.column_stack(
+    (merged_data["Book-Rating"].values, merged_data["Age"].values)
+)  # Features: Book Rating and Age
 y = merged_data["Book-Rating"].values  # Target: Book Rating
 
 # Split into train and test datasets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
 
 # Define the KNN regressor
-knn = KNeighborsRegressor(n_neighbors=5, metric='euclidean')
+knn = KNeighborsRegressor(n_neighbors=5, metric="euclidean")
 
 # Train the model
 knn.fit(X_train, y_train)
+
 
 # Granular distance function
 def granular_distance(weights, X1, X2):
@@ -41,6 +53,7 @@ def granular_distance(weights, X1, X2):
     weighted_distances = weights * distances
     return np.sqrt(np.sum(weighted_distances))
 
+
 # Modified recommendation logic using granular distance
 def recommend_books(user_data, k=5, weights=np.array([1, 1])):
     """
@@ -48,29 +61,39 @@ def recommend_books(user_data, k=5, weights=np.array([1, 1])):
     Returns book title and author.
     """
     # Merge all_ratings and all_users data to get corresponding ratings and ages
-    merged_data = pd.merge(all_ratings, all_users[['User-ID', 'Age']], on='User-ID', how='inner')
-    
+    merged_data = pd.merge(
+        all_ratings, all_users[["User-ID", "Age"]], on="User-ID", how="inner"
+    )
+
     # Drop NaN values to avoid issues
-    merged_data = merged_data.dropna(subset=['Book-Rating', 'Age'])
-    
+    merged_data = merged_data.dropna(subset=["Book-Rating", "Age"])
+
     # Calculate the features for all books (ratings, ages)
-    all_books_features = np.column_stack((merged_data["Book-Rating"].values, merged_data["Age"].values))
-    
+    all_books_features = np.column_stack(
+        (merged_data["Book-Rating"].values, merged_data["Age"].values)
+    )
+
     # Calculate the granular distance for each book using the provided weights
-    distances = np.array([granular_distance(weights, user_data, book_data) for book_data in all_books_features])
-    
+    distances = np.array(
+        [
+            granular_distance(weights, user_data, book_data)
+            for book_data in all_books_features
+        ]
+    )
+
     # Find the k nearest books based on granular distance
     indices = np.argsort(distances)[:k]
-    
+
     # here has out of bound exception
     # Prepare recommendations: book title and author
     recommendations = []
     for idx in indices:
-        book_title = all_books.iloc[idx]['Book-Title']
-        book_author = all_books.iloc[idx]['Book-Author']
+        book_title = all_books.iloc[idx]["Book-Title"]
+        book_author = all_books.iloc[idx]["Book-Author"]
         recommendations.append((book_title, book_author))
-    
+
     return recommendations
+
 
 # Example of recommending for a new user
 new_user = np.array([[3, 33]])  # Example: user with rating 3, age 33
@@ -90,16 +113,19 @@ for rec in recommendations2:
 # Generate predictions (this is what was missing before)
 y_pred = knn.predict(X_test)
 
+
 # Evaluation of recommendation quality
 def precision_at_k(y_true, y_pred, k):
     relevant = set(y_true[:k])  # Top-k true ratings
     recommended = set(y_pred[:k])  # Top-k predicted ratings
     return len(relevant & recommended) / k
 
+
 def recall_at_k(y_true, y_pred, k):
     relevant = set(y_true)  # All true ratings
     recommended = set(y_pred[:k])  # Top-k predicted ratings
     return len(relevant & recommended) / len(relevant)
+
 
 # Example metrics calculation
 y_true = y_test[:10]  # Top-10 true ratings (or actual ratings for evaluation)

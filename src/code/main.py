@@ -5,22 +5,20 @@ from pprint import pprint as pp
 from sklearn.neighbors import NearestNeighbors
 from scipy.sparse import csr_matrix
 
+
 # This code snippet is reading data from CSV files into pandas DataFrames. Here's a breakdown of what
 # each line is doing:
 df_ratings = pd.read_csv("src/data/Ratings.csv", na_values=["null", "nan", ""])
-df_ratings = df_ratings.dropna()
 df_books = pd.read_csv(
     "src/data/Books.csv",
     na_values=["null", "nan", ""],
-    keep_default_na=False,
     usecols=["ISBN", "Book-Title", "Book-Author"],
 )
-df_books = df_books.fillna("NaN")
-df_users = pd.read_csv(
-    "src/data/Users.csv", na_values=["null", "nan", ""], keep_default_na=False
-)
-df_users = df_users.fillna(-1)
+df_users = pd.read_csv("src/data/Users.csv", na_values=["null", "nan", ""])
 
+df_books = df_books.fillna("NaN")
+df_ratings = df_ratings.dropna()
+df_users = df_users.fillna(-1)
 
 # This code snippet is performing the following operations:
 combine_book_ratings = pd.merge(df_ratings, df_books, on="ISBN")
@@ -37,24 +35,14 @@ book_rating_count = (
 book_rating_with_total_count = combine_book_ratings.merge(
     book_rating_count, on=["ISBN", "Book-Title"], how="left"
 )
-# pp(
-#     book_rating_with_total_count.sort_values(by="Rating-Count", ascending=False).head(
-#         20
-#     )
-# )
 
-# pp(book_rating_with_total_count["RatingCount"].describe())
-# pp(book_rating_with_total_count["Book-Rating"].describe())
-# pp(book_rating_with_total_count["RatingCount"].quantile(np.arange(0.9, 1, 0.01)))
-
-popularity_threshold = 100
+pp(book_rating_with_total_count["RatingCount"].quantile(np.arange(0.9, 1, 0.01)))
+popularity_threshold = 136
 
 rating_popular_books = book_rating_with_total_count.query(
     "RatingCount >= @popularity_threshold"
 )
 
-# pp((rating_popular_books.groupby(by="ISBN"))[["ISBN"]].head())
-# pp(rating_popular_books.head())
 pivot = (
     rating_popular_books.drop_duplicates(["Book-Title", "User-ID"])
     .pivot(index="Book-Title", columns="User-ID", values="Book-Rating")
@@ -62,10 +50,7 @@ pivot = (
 )
 matrix_popular_books = csr_matrix(pivot.values)
 
-# pp(pivot)
-
-
-model_knn = NearestNeighbors(metric="cosine", algorithm="brute")
+model_knn = NearestNeighbors(metric="coisine" algorithm="auto",n_jobs=5)
 model_knn.fit(matrix_popular_books)
 
 

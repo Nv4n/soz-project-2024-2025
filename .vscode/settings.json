@@ -8,5 +8,8 @@
         "latex",
         "plaintext"
     ],
-    "docwriter.style": "Auto-detect"
+    "docwriter.style": "Auto-detect",
+    "python.analysis.extraPaths": [
+        "./src/code/knn_"
+    ]
 }

@@ -1,138 +1,75 @@
-import numpy as np
 import pandas as pd
-from sklearn.neighbors import KNeighborsRegressor
-from sklearn.metrics import mean_absolute_error, mean_squared_error
-from sklearn.model_selection import train_test_split
+import numpy as np
+import matplotlib.pyplot as plt
+from pprint import pprint as pp
+from sklearn.neighbors import NearestNeighbors
+from scipy.sparse import csr_matrix
 
 
-# Load the data
-all_ratings = pd.read_csv("src/data/Ratings.csv", na_values=["null", "nan", ""])
-all_books = pd.read_csv(
+# This code snippet is reading data from CSV files into pandas DataFrames. Here's a breakdown of what
+# each line is doing:
+df_ratings = pd.read_csv("src/data/Ratings.csv", na_values=["null", "nan", ""])
+df_books = pd.read_csv(
     "src/data/Books.csv",
     na_values=["null", "nan", ""],
     usecols=["ISBN", "Book-Title", "Book-Author"],
 )
-all_users = pd.read_csv("src/data/Users.csv", na_values=["null", "nan", ""])
+df_users = pd.read_csv("src/data/Users.csv", na_values=["null", "nan", ""])
 
-all_books = all_books.fillna("NaN")
-all_ratings = all_ratings.dropna()
-all_users = all_users.fillna(-1)
+df_books = df_books.fillna("NaN")
+df_ratings = df_ratings.dropna()
+df_users = df_users.fillna(-1)
 
-# Merge the ratings data with users on 'User-ID' to get ages alongside ratings
-merged_data = pd.merge(
-    all_ratings, all_users, on="User-ID", how="inner"
+# This code snippet is performing the following operations:
+combine_book_ratings = pd.merge(df_ratings, df_books, on="ISBN")
+combine_book_ratings = combine_book_ratings.drop(["Book-Author"], axis="columns")
+
+book_rating_count = (
+    combine_book_ratings.groupby(by=["Book-Title", "ISBN"])["Book-Rating"]
+    .count()
+    .reset_index()
+    .rename(columns={"Book-Rating": "RatingCount"})
+)[["ISBN", "Book-Title", "RatingCount"]]
+
+
+book_rating_with_total_count = combine_book_ratings.merge(
+    book_rating_count, on=["ISBN", "Book-Title"], how="left"
 )
 
-# Drop NaN values from merged data (both Book-Rating and Age)
-merged_data = merged_data.dropna(subset=["Book-Rating", "Age"])
+pp(book_rating_with_total_count["RatingCount"].quantile(np.arange(0.9, 1, 0.01)))
+popularity_threshold = 136
 
-# Prepare features and target
-X = np.column_stack(
-    (merged_data["Book-Rating"].values, merged_data["Age"].values)
-)  # Features: Book Rating and Age
-y = merged_data["Book-Rating"].values  # Target: Book Rating
-
-# Split into train and test datasets
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42
+rating_popular_books = book_rating_with_total_count.query(
+    "RatingCount >= @popularity_threshold"
 )
 
-# Define the KNN regressor
-knn = KNeighborsRegressor(n_neighbors=5, metric="euclidean")
+pivot = (
+    rating_popular_books.drop_duplicates(["Book-Title", "User-ID"])
+    .pivot(index="Book-Title", columns="User-ID", values="Book-Rating")
+    .fillna(0)
+)
+# matrix_popular_books = csr_matrix(pivot.values)
 
-# Train the model
-knn.fit(X_train, y_train)
+model_knn = NearestNeighbors(metric="cosine", algorithm="auto")
 
-
-# Granular distance function
-def granular_distance(weights, X1, X2):
-    """
-    Calculate the weighted granular Euclidean distance between two feature vectors.
-    """
-    distances = (X1 - X2) ** 2
-    weighted_distances = weights * distances
-    return np.sqrt(np.sum(weighted_distances))
+model_knn.fit(csr_matrix(pivot.values))
 
 
-# Modified recommendation logic using granular distance
-def recommend_books(user_data, k=5, weights=np.array([1, 1])):
-    """
-    Recommend books based on granular similarity using weighted Euclidean distance.
-    Returns book title and author.
-    """
-    # Merge all_ratings and all_users data to get corresponding ratings and ages
-    merged_data = pd.merge(
-        all_ratings, all_users[["User-ID", "Age"]], on="User-ID", how="inner"
-    )
-
-    # Drop NaN values to avoid issues
-    merged_data = merged_data.dropna(subset=["Book-Rating", "Age"])
-
-    # Calculate the features for all books (ratings, ages)
-    all_books_features = np.column_stack(
-        (merged_data["Book-Rating"].values, merged_data["Age"].values)
-    )
-
-    # Calculate the granular distance for each book using the provided weights
-    distances = np.array(
-        [
-            granular_distance(weights, user_data, book_data)
-            for book_data in all_books_features
-        ]
-    )
-
-    # Find the k nearest books based on granular distance
-    indices = np.argsort(distances)[:k]
-
-    # here has out of bound exception
-    # Prepare recommendations: book title and author
-    recommendations = []
-    for idx in indices:
-        book_title = all_books.iloc[idx]["Book-Title"]
-        book_author = all_books.iloc[idx]["Book-Author"]
-        recommendations.append((book_title, book_author))
-
-    return recommendations
+# TODO LOOK AT ANN with ANNOY OR FAISS
+# TODO Look
+def get_recommends(book=""):
+    try:
+        x = pivot.loc[book].array.reshape(1, -1)
+        distances, indices = model_knn.kneighbors(x, n_neighbors=5)
+        R_books = []
+        for distance, indice in zip(distances[0], indices[0]):
+            if distance != 0:
+                R_book = pivot.index[indice]
+                R_books.append([R_book, distance])
+        recommended_books = [book, R_books[::-1]]
+        return recommended_books
+    except:
+        return f"{book} is not in the top books"
 
 
-# Example of recommending for a new user
-new_user = np.array([[3, 33]])  # Example: user with rating 3, age 33
-recommendations = recommend_books(new_user)
-
-new_user2 = np.array([[5, 25]])  # Example: user with rating 5, age 25
-recommendations2 = recommend_books(new_user2)
-
-print("Recommendations for new_user:")
-for rec in recommendations:
-    print(f"Book Title: {rec[0]}, Author: {rec[1]}")
-
-print("Recommendations for new_user2:")
-for rec in recommendations2:
-    print(f"Book Title: {rec[0]}, Author: {rec[1]}")
-
-# Generate predictions (this is what was missing before)
-y_pred = knn.predict(X_test)
-
-
-# Evaluation of recommendation quality
-def precision_at_k(y_true, y_pred, k):
-    relevant = set(y_true[:k])  # Top-k true ratings
-    recommended = set(y_pred[:k])  # Top-k predicted ratings
-    return len(relevant & recommended) / k
-
-
-def recall_at_k(y_true, y_pred, k):
-    relevant = set(y_true)  # All true ratings
-    recommended = set(y_pred[:k])  # Top-k predicted ratings
-    return len(relevant & recommended) / len(relevant)
-
-
-# Example metrics calculation
-y_true = y_test[:10]  # Top-10 true ratings (or actual ratings for evaluation)
-y_pred_top_k = y_pred[:10]  # Top-10 predicted ratings
-
-precision = precision_at_k(y_true, y_pred_top_k, k=5)
-recall = recall_at_k(y_true, y_pred_top_k, k=5)
-
-print(f"Precision@5: {precision}")
-print(f"Recall@5: {recall}")
+pp(get_recommends("Tess of the D'Urbervilles (Wordsworth Classics)"))

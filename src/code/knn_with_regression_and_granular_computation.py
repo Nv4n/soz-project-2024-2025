@@ -16,16 +16,26 @@ all_books = pd.read_csv('src\\data\\Books.csv')
 all_users = pd.read_csv('src\\data\\Users.csv')
 print(f"Head records of Books:\n{all_books.head()}\nHead records of users:\n{all_users.head()}\nHead records of ratings:\n{all_ratings.head()}\n")
 
-# Merge the ratings data with users on 'User-ID' to get ages alongside ratings.
 merged_data = pd.merge(all_ratings.dropna(), all_users[['User-ID', 'Age']], on='User-ID', how='inner')
 print(f"Merged data:\n{merged_data}\n")
+print(f"Merged data info:\n{merged_data.info()}\n")
+
+# Initial length of the merged data
+initial_len = len(merged_data)
+
+# Count rows that have NaN values in any column
+with_nan_len = merged_data.isna().any(axis=1).sum()
 
 # Drop NaN values from merged data (both Book-Rating and Age)
-# here 40% of readers' data is permenently lost because we do not know the age of these readers.
-print(merged_data.info())
+# Here, 40% of readers' data is permanently lost because we do not know the age of these readers.
 merged_data = merged_data.fillna(value=-1)
-print(merged_data.info())
-print(f"Merged cleaned of NAN values data:\n{merged_data}")
+print(f"Cleaned of NaN values merged data:\n{merged_data}\n")
+print(f"Cleaned of NaN values merged data info:\n{merged_data.info()}\n")
+
+# Calculate percentage of rows without NaN values
+without_nans_len_percentage = (initial_len - with_nan_len) / initial_len * 100
+
+print(f"Percentage of records without NaN values: {without_nans_len_percentage:.2f}%")
 
 # Dimensions to be checkd for correlation by Pearson method before going 
 # to regression recommendation approach.
@@ -155,8 +165,8 @@ recall = recall_at_k(y_true, y_pred_top_k, k=5)
 # preferences).
 print(f"Precision@5: {precision}")
 
-# For example Recall@5 = 0.5 means that, of all the relevant items for the user, 
-# 50% were included in the top 5 recommendations.
+# For example Recall@5 = 0.66666666666666666 means that, of all the relevant items for the user, 
+# 66% were included in the top 5 recommendations.
 print(f"Recall@5: {recall}")
 
 # As we saw earlier this model is not suitable for aour task because there is no linear

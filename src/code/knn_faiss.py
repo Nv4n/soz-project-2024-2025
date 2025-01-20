@@ -35,8 +35,13 @@ book_rating_with_total_count = combine_book_ratings.merge(
 
 # Threshold for popularity
 popularity_threshold = 136
-popular_books = book_rating_with_total_count.query("RatingCount >= @popularity_threshold")
-unpopular_books = book_rating_with_total_count.query("RatingCount < @popularity_threshold")
+popular_books = book_rating_with_total_count.query(
+    "RatingCount >= @popularity_threshold"
+)
+unpopular_books = book_rating_with_total_count.query(
+    "RatingCount < @popularity_threshold"
+)
+
 
 # Prepare vectors for Faiss
 def prepare_faiss_data(data):
@@ -51,6 +56,7 @@ def prepare_faiss_data(data):
     normalized_data = normalize(dense_matrix, axis=1)
     return normalized_data, user_book_matrix.index
 
+
 # Prepare data for popular books
 popular_vectors, popular_isbns = prepare_faiss_data(popular_books)
 
@@ -64,6 +70,7 @@ unpopular_vectors, unpopular_isbns = prepare_faiss_data(unpopular_books)
 unpopular_index = faiss.IndexFlatIP(unpopular_vectors.shape[1])
 unpopular_index.add(unpopular_vectors)
 
+
 # Recommendation function
 def get_recommends_faiss(isbn, k_neighbors=5):
     try:
@@ -73,7 +80,8 @@ def get_recommends_faiss(isbn, k_neighbors=5):
             distances, indices = gpu_index.search(vector, k_neighbors)
             recommendations = [
                 [popular_isbns[i], distances[0][j]]
-                for j, i in enumerate(indices[0]) if distances[0][j] > 0
+                for j, i in enumerate(indices[0])
+                if distances[0][j] > 0
             ]
         elif isbn in unpopular_isbns:
             idx = np.where(unpopular_isbns == isbn)[0][0]
@@ -81,13 +89,15 @@ def get_recommends_faiss(isbn, k_neighbors=5):
             distances, indices = unpopular_index.search(vector, k_neighbors)
             recommendations = [
                 [unpopular_isbns[i], distances[0][j]]
-                for j, i in enumerate(indices[0]) if distances[0][j] > 0
+                for j, i in enumerate(indices[0])
+                if distances[0][j] > 0
             ]
         else:
             return f"{isbn} not found in the dataset."
         return [isbn, recommendations[::-1]]
     except Exception as e:
         return str(e)
+
 
 # Example recommendation
 pp(get_recommends_faiss("1558745157"))

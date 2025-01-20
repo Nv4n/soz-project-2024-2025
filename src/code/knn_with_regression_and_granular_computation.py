@@ -31,7 +31,7 @@ initial_len = len(merged_data)
 with_nan_len = merged_data.isna().any(axis=1).sum()
 
 # Drop NaN values from merged data (both Book-Rating and Age)
-# Here, 40% of readers' data is permanently lost because we do not know the age of these readers.
+# Here, around 30% of readers' data is permanently lost because we do not know the age of these readers.
 merged_data = merged_data.fillna(value=-1)
 print(f"Cleaned of NaN values merged data:\n{merged_data}\n")
 print(f"Cleaned of NaN values merged data info:\n{merged_data.info()}\n")
@@ -195,7 +195,7 @@ recall = recall_at_k(y_true, y_pred_top_k, k=5)
 print(f"Precision@5: {precision}")
 
 # For example Recall@5 = 0.66666666666666666 means that, of all the relevant items for the user,
-# 66% were included in the top 5 recommendations.
+# around 67% were included in the top 5 recommendations.
 print(f"Recall@5: {recall}")
 
 # As we saw earlier this model is not suitable for aour task because there is no linear

@@ -4,6 +4,7 @@ import pandas as pd
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from sklearn.model_selection import train_test_split
+from scipy.stats import pearsonr
 import warnings
 
 # Suppress the warnings.
@@ -13,17 +14,38 @@ warnings.filterwarnings('ignore')
 all_ratings = pd.read_csv('src\\data\\Ratings.csv')
 all_books = pd.read_csv('src\\data\\Books.csv')
 all_users = pd.read_csv('src\\data\\Users.csv')
+print(f"Head records of Books:\n{all_books.head()}\nHead records of users:\n{all_users.head()}\nHead records of ratings:\n{all_ratings.head()}\n")
 
 # Merge the ratings data with users on 'User-ID' to get ages alongside ratings.
-merged_data = pd.merge(all_ratings, all_users[['User-ID', 'Age']], on='User-ID', how='inner')
+merged_data = pd.merge(all_ratings.dropna(), all_users[['User-ID', 'Age']], on='User-ID', how='inner')
+print(f"Merged data:\n{merged_data}\n")
 
 # Drop NaN values from merged data (both Book-Rating and Age)
 # here 40% of readers' data is permenently lost because we do not know the age of these readers.
-merged_data = merged_data.dropna(subset=['Book-Rating', 'Age'])
+print(merged_data.info())
+merged_data = merged_data.fillna(value=-1)
+print(merged_data.info())
+print(f"Merged cleaned of NAN values data:\n{merged_data}")
 
-# Prepare features and target
+# Dimensions to be checkd for correlation by Pearson method before going 
+# to regression recommendation approach.
+x_ratings = np.array(merged_data['Book-Rating'])
+y_ages = np.array(merged_data['Age'])
+
+# Calculate Pearson correlation coefficient
+correlation, p_value = pearsonr(x_ratings, y_ages)
+
+print(f"Pearson Correlation: {correlation}")
+print(f"P-value: {p_value}") # equals to zero => no linear relationship between readers' age and books' rating.
+
+# No matter the lack of relationship, we continue with preparation for regression approach
+# with experimental aims. So, firstly we shpuld prepare the data sets. 
+
+# Prepare features and target.
 X = np.column_stack((merged_data["Book-Rating"].values, merged_data["Age"].values))  # Features: Book Rating and Age
 y = merged_data["Book-Rating"].values  # Target: Book Rating
+print(f"X column stack of Book Rating and Age recommendation features:\n{X}\n")
+print(f"y array of Book Ratings:\n{X}\n")
 
 # Split into train and test datasets.
 # The test size is fixed to 0.2 because the datasets are large and we should be sure that
@@ -32,6 +54,10 @@ y = merged_data["Book-Rating"].values  # Target: Book Rating
 # randomness of the data splitting. This is important for consistent and easy to debug 
 # results during experiments.
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+print(f"X_train data set:\n{X_train}\n")
+print(f"y_train data set:\n{y_train}\n")
+print(f"X_test data set:\n{X_test}\n")
+print(f"y_test data set:\n{y_test}\n")
 
 # Define the KNN regressor model with the Euclidien metric.
 knn = KNeighborsRegressor(n_neighbors=5, metric='euclidean')
@@ -132,3 +158,6 @@ print(f"Precision@5: {precision}")
 # For example Recall@5 = 0.5 means that, of all the relevant items for the user, 
 # 50% were included in the top 5 recommendations.
 print(f"Recall@5: {recall}")
+
+# As we saw earlier this model is not suitable for aour task because there is no linear
+# relationship between the considered books' recommendation components. 

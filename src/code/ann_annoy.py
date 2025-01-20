@@ -119,5 +119,4 @@ def get_recommends(isbn="", k_neighbors=5):
 
 # Test the function
 pp(get_recommends("1558745157"))
-
 pp(get_recommends("0330281747"))

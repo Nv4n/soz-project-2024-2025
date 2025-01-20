@@ -2,7 +2,6 @@ from annoy import AnnoyIndex
 import pandas as pd
 import numpy as np
 from scipy.sparse import csr_matrix
-from scipy.spatial.distance import cosine
 from pprint import pprint as pp
 
 # Load data
@@ -21,6 +20,7 @@ df_users = df_users.fillna(-1)
 combine_book_ratings = pd.merge(df_ratings, df_books, on="ISBN")
 combine_book_ratings = combine_book_ratings.drop(["Book-Author"], axis="columns")
 
+# Compute book popularity
 book_rating_count = (
     combine_book_ratings.groupby(by=["ISBN"])["Book-Rating"]
     .count()
@@ -32,6 +32,7 @@ book_rating_with_total_count = combine_book_ratings.merge(
     book_rating_count, on=["ISBN"], how="left"
 )
 
+# Thresholds
 pp(book_rating_with_total_count["RatingCount"].quantile(np.arange(0.9, 1, 0.01)))
 popularity_threshold = 136
 

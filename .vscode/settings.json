@@ -8,5 +8,5 @@
         "latex",
         "plaintext"
     ],
-    "docwriter.style": "NumPy"
+    "docwriter.style": "Auto-detect"
 }

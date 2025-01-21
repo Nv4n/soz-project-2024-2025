@@ -34,6 +34,9 @@ book_rating_with_total_count = combine_book_ratings.merge(
     book_rating_count, on=["ISBN"], how="left"
 )
 
+# Thresholds
+
+pp(book_rating_with_total_count["RatingCount"].quantile(np.arange(0.9, 1, 0.01)))
 popularity_threshold = 136
 popular_books = book_rating_with_total_count.query(
     "RatingCount >= @popularity_threshold"
@@ -44,7 +47,7 @@ unpopular_books = book_rating_with_total_count.query(
 
 # Create embeddings for popular books
 pivot_popular = (
-    popular_books.drop_duplicates(["Book-Title", "User-ID"])
+    popular_books.drop_duplicates(["ISBN", "User-ID"])
     .pivot(index="ISBN", columns="User-ID", values="Book-Rating")
     .fillna(0)
 )

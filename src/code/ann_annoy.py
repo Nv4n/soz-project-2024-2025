@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from scipy.sparse import csr_matrix
 from pprint import pprint as pp
+from sklearn.preprocessing import normalize
 
 # Load data
 df_ratings = pd.read_csv("src/data/Ratings.csv", na_values=["null", "nan", ""])
@@ -33,20 +34,23 @@ book_rating_with_total_count = combine_book_ratings.merge(
 )
 
 # Thresholds
+
 pp(book_rating_with_total_count["RatingCount"].quantile(np.arange(0.9, 1, 0.01)))
 popularity_threshold = 136
 
 popular_books = book_rating_with_total_count.query(
     "RatingCount >= @popularity_threshold"
 )
-unpopular_books = book_rating_with_total_count.query(
-    "RatingCount < @popularity_threshold"
-)
+
+# Popular annoy
 
 # Sparse matrix
-user_book_matrix = popular_books.pivot(
-    index="ISBN", columns="User-ID", values="Book-Rating"
-).fillna(0)
+user_book_matrix = (
+    popular_books.drop_duplicates(["ISBN", "User-ID"])
+    .pivot(index="ISBN", columns="User-ID", values="Book-Rating")
+    .fillna(0)
+)
+
 sparse_matrix = csr_matrix(user_book_matrix.values)
 
 # Build Annoy Index for all books
@@ -77,44 +81,39 @@ def get_recommends(isbn="", k_neighbors=5):
         if isbn in isbn_to_index:
             isbn_idx = isbn_to_index[isbn]
             nearest_neighbors = annoy_index.get_nns_by_item(
-                isbn_idx, k_neighbors, include_distances=True
+                isbn_idx, k_neighbors + 1, include_distances=True
             )
             R_books = []
             for neighbor_idx, distance in zip(*nearest_neighbors):
                 neighbor_isbn = index_to_isbn[neighbor_idx]
-                R_book = combine_book_ratings[
-                    combine_book_ratings["ISBN"] == neighbor_isbn
-                ]["Book-Title"].values[0]
-                R_books.append([R_book, distance])
-            return [isbn, R_books[::-1]]
-        elif isbn in unpopular_books["ISBN"].values:
-            # Approximate vector for non-popular books
-            isbn_vector = sparse_matrix[isbn_to_index[isbn]].toarray()[0]
-            nearest_neighbors = annoy_index.get_nns_by_vector(
-                isbn_vector, k_neighbors, include_distances=True
-            )
-            R_books = []
-            for neighbor_idx, distance in zip(*nearest_neighbors):
-                neighbor_isbn = index_to_isbn[neighbor_idx]
-                R_book = combine_book_ratings[
-                    combine_book_ratings["ISBN"] == neighbor_isbn
-                ]["Book-Title"].values[0]
+                if neighbor_isbn == isbn:  # Skip the same ISBN
+                    continue
+                R_book = [
+                    combine_book_ratings[combine_book_ratings["ISBN"] == neighbor_isbn][
+                        "Book-Title"
+                    ].values[0],
+                    neighbor_isbn,
+                ]
                 R_books.append([R_book, distance])
             return [isbn, R_books[::-1]]
         else:
             # Fallback to most popular books
             R_books = [
                 [
-                    combine_book_ratings[combine_book_ratings["ISBN"] == book][
-                        "Book-Title"
-                    ].values[0],
+                    [
+                        combine_book_ratings[combine_book_ratings["ISBN"] == book][
+                            "Book-Title"
+                        ].values[0],
+                        book,
+                    ],
                     0,
                 ]
                 for book in most_popular_books[:k_neighbors]
             ]
             return [isbn, R_books]
     except Exception as e:
-        return str(e)
+        pp("ERROR")
+        return str(e.with_traceback())
 
 
 # Test the function

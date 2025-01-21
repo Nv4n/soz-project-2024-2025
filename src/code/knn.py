@@ -43,7 +43,7 @@ rating_popular_books = book_rating_with_total_count.query(
 )
 
 pivot = (
-    rating_popular_books.drop_duplicates(["Book-Title", "User-ID"])
+    rating_popular_books.drop_duplicates(["ISBN", "User-ID"])
     .pivot(index="ISBN", columns="User-ID", values="Book-Rating")
     .fillna(0)
 )

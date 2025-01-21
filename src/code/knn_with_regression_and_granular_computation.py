@@ -31,7 +31,7 @@ initial_len = len(merged_data)
 with_nan_len = merged_data.isna().any(axis=1).sum()
 
 # Drop NaN values from merged data (both Book-Rating and Age)
-# Here, around 30% of readers' data is permanently lost because we do not know the age of these readers.
+# Here, around 40% of readers' data is permanently lost because we do not know the age of these readers.
 merged_data = merged_data.fillna(value=-1)
 print(f"Cleaned of NaN values merged data:\n{merged_data}\n")
 print(f"Cleaned of NaN values merged data info:\n{merged_data.info()}\n")

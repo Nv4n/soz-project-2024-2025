@@ -124,6 +124,32 @@ def get_recommends(isbn, k_neighbors=5):
     return [isbn, recommended_books]
 
 
+def get_most_popular(isbn, k_neighbors=5):
+    # Fallback to most popular books
+    recommended_books = [
+        [
+            [
+                combine_book_ratings[combine_book_ratings["ISBN"] == book][
+                    "Book-Title"
+                ].values[0],
+                book,
+            ],
+            0,
+        ]
+        for book in most_popular_books[:k_neighbors]
+    ]
+    return [isbn, recommended_books]
+
+
+def get_title_isbn(isbn):
+    return [
+        combine_book_ratings[combine_book_ratings["ISBN"] == isbn]["Book-Title"].values[
+            0
+        ],
+        isbn,
+    ]
+
+
 # Test the function
 pp(get_recommends("1558745157"))
 pp(get_recommends("0330281747"))

@@ -73,12 +73,21 @@ isbn_list_unpopular = unpopular_titles["ISBN"].tolist()
 if tfidf_embeddings.shape[0] > 0:
     tfidf_embeddings = normalize(tfidf_embeddings, axis=1, norm="l2")
 
+pp(f"TF-IDF embeddings shape: {tfidf_embeddings.shape}")
+pp(f"Zero embeddings count: {(tfidf_embeddings.sum(axis=1) == 0).sum()}")
+
+valid_rows = tfidf_embeddings.sum(axis=1) > 0
+tfidf_embeddings = tfidf_embeddings[valid_rows]
+isbn_list_unpopular = [
+    isbn for valid, isbn in zip(valid_rows, isbn_list_unpopular) if valid
+]
+
+pp(f"TF-IDF embeddings shape: {tfidf_embeddings.shape}")
+pp(f"Zero embeddings count: {(tfidf_embeddings.sum(axis=1) == 0).sum()}")
 
 index_unpopular = faiss.IndexFlatIP(tfidf_embeddings.shape[1])
 index_unpopular.add(tfidf_embeddings)
 
-pp(f"TF-IDF embeddings shape: {tfidf_embeddings.shape}")
-pp(f"Zero embeddings count: {(tfidf_embeddings.sum(axis=1) == 0).sum()}")
 
 # Fallback to k most popular books
 most_popular_books = (
@@ -120,7 +129,8 @@ def get_recommends(isbn, k_neighbors=5):
             return get_most_popular(isbn, k_neighbors)
     except Exception as e:
         pp("ERROR")
-        return str(e.with_traceback())
+        pp(str(e.with_traceback()))
+        return get_most_popular(isbn, k_neighbors)
     return [isbn, recommended_books]
 
 

@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 from scipy.sparse import csr_matrix
 from pprint import pprint as pp
-from sklearn.preprocessing import normalize
 
 # Load data
 df_ratings = pd.read_csv("src/data/Ratings.csv", na_values=["null", "nan", ""])

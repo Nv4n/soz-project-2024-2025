@@ -42,7 +42,7 @@ popular_books = book_rating_with_total_count.query(
     "RatingCount >= @popularity_threshold"
 )
 unpopular_books = book_rating_with_total_count.query(
-    "RatingCount < @popularity_threshold"
+    "RatingCount < @popularity_threshold & RatingCount > 0"
 )
 
 # Create embeddings for popular books
@@ -70,32 +70,57 @@ isbn_list_unpopular = unpopular_titles["ISBN"].tolist()
 index_unpopular = faiss.IndexFlatIP(tfidf_embeddings.shape[1])
 index_unpopular.add(normalize(tfidf_embeddings, axis=1, norm="l2"))
 
+# Fallback to k most popular books
+most_popular_books = (
+    popular_books.groupby("ISBN")
+    .size()
+    .sort_values(ascending=False)
+    .index[:10]
+    .tolist()
+)
+
 
 # Recommendation function
 def get_recommends(isbn, k_neighbors=5):
-    if isbn in isbn_list_popular:
-        idx = isbn_list_popular.index(isbn)
-        distances, indices = index.search(
-            popular_embeddings[idx].reshape(1, -1), k_neighbors
-        )
-        recommended_books = [
-            [isbn_list_popular[i], distances[0][j]]
-            for j, i in enumerate(indices[0])
-            if distances[0][j] > 0
-        ]
-    elif isbn in isbn_list_unpopular:
-        idx = isbn_list_unpopular.index(isbn)
-        distances, indices = index_unpopular.search(
-            normalize(tfidf_embeddings[idx].reshape(1, -1)), k_neighbors
-        )
-        recommended_books = [
-            [isbn_list_unpopular[i], distances[0][j]]
-            for j, i in enumerate(indices[0])
-            if distances[0][j] > 0
-        ]
-    else:
-        return f"{isbn} is not found in the dataset."
-
+    try:
+        if isbn in isbn_list_popular:
+            idx = isbn_list_popular.index(isbn)
+            distances, indices = index.search(
+                popular_embeddings[idx].reshape(1, -1), k_neighbors + 1
+            )
+            recommended_books = [
+                [isbn_list_popular[i], distances[0][j]]
+                for j, i in enumerate(indices[0])
+                if distances[0][j] > 0 and isbn_list_popular[i] != isbn
+            ]
+        elif isbn in isbn_list_unpopular:
+            idx = isbn_list_unpopular.index(isbn)
+            distances, indices = index_unpopular.search(
+                normalize(tfidf_embeddings[idx].reshape(1, -1)), k_neighbors
+            )
+            recommended_books = [
+                [isbn_list_unpopular[i], distances[0][j]]
+                for j, i in enumerate(indices[0])
+                if distances[0][j] > 0
+            ]
+        else:
+            # Fallback to most popular books
+            recommended_books = [
+                [
+                    [
+                        combine_book_ratings[combine_book_ratings["ISBN"] == book][
+                            "Book-Title"
+                        ].values[0],
+                        book,
+                    ],
+                    0,
+                ]
+                for book in most_popular_books[:k_neighbors]
+            ]
+            return [isbn, recommended_books]
+    except Exception as e:
+        pp("ERROR")
+        return str(e.with_traceback())
     return [isbn, recommended_books]
 
 
